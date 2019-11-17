@@ -20,6 +20,10 @@ var filterOutFunc = func(r *http.Request) bool {
 	return strings.Contains(r.RequestURI, "disable")
 }
 
+var appendHeadersFunc = func() map[string]string {
+	return map[string]string{"Timing-Allow-Origin": "*"}
+}
+
 func main() {
 	// Our handler. In a real application this might be your root router,
 	// or some subset of your router. Wrapping this ensures that all routes
@@ -28,6 +32,7 @@ func main() {
 
 	opts := &servertiming.MiddlewareOpts{
 		FilterOutFunc: filterOutFunc,
+		AppendHeadersFunc: appendHeadersFunc,
 	}
 
 	h = servertiming.Middleware(h, opts)
