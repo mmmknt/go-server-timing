@@ -8,7 +8,8 @@ import (
 
 // MiddlewareOpts are options for the Middleware.
 type MiddlewareOpts struct {
-	// Nothing currently, reserved for the future.
+	// When filterOutFunc return true, skip this middleware
+	FilterOutFunc func(r *http.Request) bool
 }
 
 // Middleware wraps an http.Handler and provides a *Header in the request
@@ -23,8 +24,14 @@ type MiddlewareOpts struct {
 // To control when Server-Timing is sent, the easiest approach is to wrap
 // this middleware and only call it if the request should send server timings.
 // For examples, see the README.
-func Middleware(next http.Handler, _ *MiddlewareOpts) http.Handler {
+func Middleware(next http.Handler, opts *MiddlewareOpts) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// If filter out this middleware, next handler execute only
+		if opts != nil && opts.FilterOutFunc != nil && opts.FilterOutFunc(r) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		var (
 			// Create the Server-Timing headers struct
 			h Header

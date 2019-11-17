@@ -5,14 +5,19 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/mitchellh/go-server-timing"
+	"github.com/mmmknt/go-server-timing"
 )
 
 func init() {
 	rand.Seed(time.Now().Unix())
+}
+
+var filterOutFunc = func(r *http.Request) bool {
+	return strings.Contains(r.RequestURI, "disable")
 }
 
 func main() {
@@ -21,8 +26,11 @@ func main() {
 	// handled by this handler have access to the server timing header struct.
 	var h http.Handler = http.HandlerFunc(handler)
 
-	// Wrap our handler with the server timing middleware
-	h = servertiming.Middleware(h, nil)
+	opts := &servertiming.MiddlewareOpts{
+		FilterOutFunc: filterOutFunc,
+	}
+
+	h = servertiming.Middleware(h, opts)
 
 	// Let the user know what to do for this example
 	println("Visit http://127.0.0.1:8080")
