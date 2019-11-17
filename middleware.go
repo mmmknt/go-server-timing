@@ -10,6 +10,9 @@ import (
 type MiddlewareOpts struct {
 	// When filterOutFunc return true, skip this middleware
 	FilterOutFunc func(r *http.Request) bool
+	// The dictionaries that AppendHeadersFunc returns are appended to response header.
+	// When dictionary is {"key", "value"}, headers.Set(key, value) is executed.
+	AppendHeadersFunc func() map[string]string
 }
 
 // Middleware wraps an http.Handler and provides a *Header in the request
@@ -55,7 +58,7 @@ func Middleware(next http.Handler, opts *MiddlewareOpts) http.Handler {
 				// http.ResponseWriter.WriteHeader to be called in it's place
 				return func(code int) {
 					// Write the headers
-					writeHeader(headers, &h)
+					writeHeader(headers, &h, opts)
 
 					// Remember that headers were written
 					headerWritten = true
@@ -71,12 +74,12 @@ func Middleware(next http.Handler, opts *MiddlewareOpts) http.Handler {
 
 		// In case that next did not called WriteHeader function, add timing header to the response headers
 		if !headerWritten {
-			writeHeader(headers, &h)
+			writeHeader(headers, &h, opts)
 		}
 	})
 }
 
-func writeHeader(headers http.Header, h *Header) {
+func writeHeader(headers http.Header, h *Header, opts *MiddlewareOpts) {
 	// Grab the lock just in case there is any ongoing concurrency that
 	// still has a reference and may be modifying the value.
 	h.Lock()
@@ -88,4 +91,10 @@ func writeHeader(headers http.Header, h *Header) {
 	}
 
 	headers.Set(HeaderKey, h.String())
+
+	if opts != nil && opts.AppendHeadersFunc != nil {
+		for k, v := range opts.AppendHeadersFunc() {
+			headers.Set(k, v)
+		}
+	}
 }
